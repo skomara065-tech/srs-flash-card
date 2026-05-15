@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, getCountFromServer } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Plus, Trash2, Edit2, Send, Save, AlertTriangle, Users, BookCopy, Zap, X } from 'lucide-react';
+import { Loader2, Plus, Trash2, Edit2, Send, Save, AlertTriangle, Users, BookCopy, Zap, X, ChevronLeft } from 'lucide-react';
 import { SRSMode } from '../types';
 
 // Double protection — Firestore rules are the real security layer
@@ -27,7 +27,7 @@ interface AdminDeck {
   pushedToUsersCount?: number;
 }
 
-export function AdminPanel() {
+export function AdminPanel({ onBack }: { onBack: () => void }) {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ users: 0, drafted: 0, pushes: 0 });
   const [adminDecks, setAdminDecks] = useState<AdminDeck[]>([]);
@@ -291,6 +291,13 @@ export function AdminPanel() {
 
       <div className="flex items-center justify-between">
         <div>
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 transition-colors mb-2"
+          >
+            <ChevronLeft size={16} />
+            Back to Dashboard
+          </button>
           <h1 className="text-3xl font-sans font-medium tracking-tight text-neutral-900">Admin Dashboard</h1>
           <p className="text-neutral-500 mt-1">Manage global decks and broadcast to all users.</p>
         </div>
@@ -329,16 +336,16 @@ export function AdminPanel() {
 
       <div className="flex items-center justify-between mt-8 mb-4">
         <h2 className="text-xl font-semibold tracking-tight">Admin Decks</h2>
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-neutral-600 font-medium bg-white px-4 py-2 rounded-xl border border-neutral-200 shadow-sm cursor-pointer hover:bg-neutral-50 transition-colors">
-            <input 
-              type="checkbox" 
-              checked={dryRun} 
-              onChange={e => setDryRun(e.target.checked)}
-              className="rounded text-black focus:ring-black"
-            />
-            Dry Run Mode
-          </label>
+      </div>
+      
+      <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl mb-4">
+        <div className={`w-10 h-6 rounded-full transition-colors cursor-pointer flex items-center px-1 ${dryRun ? 'bg-amber-400' : 'bg-neutral-300'}`}
+          onClick={() => setDryRun(!dryRun)}>
+          <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${dryRun ? 'translate-x-4' : 'translate-x-0'}`} />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-amber-800">Dry Run Mode</p>
+          <p className="text-xs text-amber-600">When ON, pushing decks only logs to console — no data is written.</p>
         </div>
       </div>
       

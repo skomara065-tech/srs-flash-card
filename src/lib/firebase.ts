@@ -31,8 +31,6 @@ export function logAnalyticsEvent(name: string, params?: Record<string, any>) {
   }
 }
 
-console.log("Firebase initialized with Project ID:", firebaseConfig.projectId);
-console.log("Firestore using Database ID:", firebaseConfig.firestoreDatabaseId);
 
 export const googleProvider = new GoogleAuthProvider();
 

@@ -7,7 +7,7 @@ import { StudyView } from "./components/StudyView";
 import { DeckDetail } from "./components/DeckDetail";
 import { AdminPanel } from "./components/AdminPanel";
 import { Deck, Folder } from "./types";
-import { collection, query, where, getDocs, orderBy, setDoc, doc } from "firebase/firestore";
+import { collection, query, where, getDocs, setDoc, doc } from "firebase/firestore";
 import { db } from "./lib/firebase";
 import { useAdmin } from "./hooks/useAdmin";
 
@@ -135,7 +135,9 @@ export default function App() {
       onAdminClick={() => {
         setView('admin');
         setActiveDeck(null);
+        setViewFolderId(null);
       }}
+      currentView={view}
     >
       {view === 'dashboard' && (
         <Dashboard 
@@ -190,7 +192,10 @@ export default function App() {
       )}
 
       {view === 'admin' && isAdmin && (
-        <AdminPanel />
+        <AdminPanel onBack={() => {
+          setView('dashboard');
+          setViewFolderId(null);
+        }} />
       )}
     </Layout>
   );

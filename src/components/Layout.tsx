@@ -18,9 +18,10 @@ interface LayoutProps {
   setViewFolderId?: (id: string | null) => void;
   isAdmin?: boolean;
   onAdminClick?: () => void;
+  currentView?: string;
 }
 
-export function Layout({ children, user, loading, hideSidebar, folders = [], decks = [], onSelectDeck, viewFolderId, setViewFolderId, isAdmin, onAdminClick }: LayoutProps) {
+export function Layout({ children, user, loading, hideSidebar, folders = [], decks = [], onSelectDeck, viewFolderId, setViewFolderId, isAdmin, onAdminClick, currentView }: LayoutProps) {
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
 
   const [authError, setAuthError] = useState("");
@@ -298,7 +299,8 @@ export function Layout({ children, user, loading, hideSidebar, folders = [], dec
                 className="w-full flex items-center gap-3 px-3 py-2 mb-2 rounded-lg text-sm font-medium transition-all bg-amber-50 text-amber-700 hover:bg-amber-100"
               >
                 <ShieldCheck size={18} />
-                <span>Admin</span>
+                <span className="flex-1 text-left">Admin Dashboard</span>
+                <span className="text-[10px] font-bold bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-md">DEV</span>
               </button>
             )}
             <div className="flex items-center gap-3 p-3 mb-2">
@@ -325,7 +327,11 @@ export function Layout({ children, user, loading, hideSidebar, folders = [], dec
           <div className="flex items-center gap-2">
             <BookOpen className="w-5 h-5" />
             <span className="font-medium truncate max-w-[150px]">
-              {viewFolderId ? folders.find(f => f.id === viewFolderId)?.name : "Recall"}
+              {currentView === 'admin'
+                ? 'Admin Dashboard'
+                : viewFolderId
+                  ? folders.find(f => f.id === viewFolderId)?.name
+                  : 'Recall'}
             </span>
           </div>
           <div className="flex items-center gap-4">
