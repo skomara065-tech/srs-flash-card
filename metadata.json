@@ -1,0 +1,6 @@
+{
+  "name": "Recall - Smart Spaced Repetition",
+  "description": "An AI-powered flashcard tool that uses spaced repetition to optimize your learning and retention.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["AI-powered deck generation", "Spaced repetition study mode", "Dashboard for tracking progress"]
+}

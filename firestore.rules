@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admin_users/$(request.auth.uid));
+    }
+
+    // --- Admin Users ---
+    match /admin_users/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
+    // --- Admin Decks ---
+    match /admin_decks/{deckId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // --- Users ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.email.size() < 256;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL']);
+    }
+
+    // --- Decks ---
+    function isValidDeck(data) {
+      return data.keys().hasAll(['userId', 'title']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 100;
+      // Removed `data.userId == request.auth.uid` check from validation so admin can create decks for users
+    }
+
+    match /decks/{deckId} {
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidDeck(request.resource.data);
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && 
+                    isValidDeck(request.resource.data) &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasAny(['title', 'description', 'cardCount', 'tags', 'updatedAt', 'folderId', 'parentId', 'srsMode', 'dueCounts']);
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // --- Folders ---
+    function isValidFolder(data) {
+      return data.keys().hasAll(['userId', 'name']) &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 50;
+    }
+
+    match /folders/{folderId} {
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidFolder(request.resource.data);
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && 
+                    isValidFolder(request.resource.data) &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'updatedAt']);
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // --- Cards ---
+    function isValidCard(data) {
+      return data.keys().hasAll(['deckId', 'front', 'back']) &&
+             data.deckId is string &&
+             data.front is string && data.front.size() > 0 && data.front.size() <= 400 &&
+             data.back is string && data.back.size() > 0 && data.back.size() <= 1000;
+    }
+
+    function ownsDeck(deckId) {
+      return get(/databases/$(database)/documents/decks/$(deckId)).data.userId == request.auth.uid;
+    }
+
+    match /decks/{deckId}/cards/{cardId} {
+      allow list, get: if isSignedIn() && (ownsDeck(deckId) || isAdmin());
+      allow create: if isSignedIn() && (ownsDeck(deckId) || isAdmin()) && isValidCard(request.resource.data);
+      allow update: if isSignedIn() && (ownsDeck(deckId) || isAdmin()) && isValidCard(request.resource.data) &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasAny(['front', 'back', 'nextReview', 'interval', 'easeFactor', 'repetitionCount', 'lastRating', 'updatedAt', 'progress']);
+      allow delete: if isSignedIn() && (ownsDeck(deckId) || isAdmin());
+    }
+  }
+}

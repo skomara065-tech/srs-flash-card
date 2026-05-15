@@ -1,0 +1,98 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Deck": {
+      "title": "Deck",
+      "description": "A collection of flashcards",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "folderId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "cardCount": { "type": "integer" },
+        "srsMode": { "type": "string", "enum": ["general", "fast", "medical"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["userId", "title"]
+    },
+    "Folder": {
+      "title": "Folder",
+      "description": "A container for decks",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name"]
+    },
+    "SRSProgress": {
+      "title": "SRSProgress",
+      "type": "object",
+      "properties": {
+        "nextReview": { "type": "string", "format": "date-time" },
+        "interval": { "type": "integer" },
+        "easeFactor": { "type": "number" },
+        "repetitionCount": { "type": "integer" },
+        "lastRating": { "type": "integer" }
+      }
+    },
+    "Card": {
+      "title": "Card",
+      "description": "An individual flashcard with mode-specific SRS data",
+      "type": "object",
+      "properties": {
+        "deckId": { "type": "string" },
+        "front": { "type": "string" },
+        "back": { "type": "string" },
+        "progress": {
+          "type": "object",
+          "properties": {
+            "general": { "$ref": "SRSProgress" },
+            "fast": { "$ref": "SRSProgress" },
+            "medical": { "$ref": "SRSProgress" }
+          }
+        },
+        "nextReview": { "type": "string", "format": "date-time" },
+        "interval": { "type": "integer" },
+        "easeFactor": { "type": "number" },
+        "repetitionCount": { "type": "integer" },
+        "lastRating": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deckId", "front", "back"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Stored user profiles"
+    },
+    "decks/{deckId}": {
+      "schema": "Deck",
+      "description": "Users flashcard decks"
+    },
+    "folders/{folderId}": {
+      "schema": "Folder",
+      "description": "User folders for grouping decks"
+    },
+    "decks/{deckId}/cards/{cardId}": {
+      "schema": "Card",
+      "description": "Cards within a specific deck"
+    }
+  }
+}
