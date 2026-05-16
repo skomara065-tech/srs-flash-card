@@ -2,6 +2,97 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
+import admin from "firebase-admin";
+
+// Initialize Firebase Admin (Assumes ADC or GOOGLE_APPLICATION_CREDENTIALS)
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
+/**
+ * Option A: Fetching tokens from Firestore 'users' collection in batches of 500
+ * using `messaging().sendEachForMulticast()`.
+ * 
+ * PROS:
+ * - Highly targeted: You have full control over who gets the message.
+ * - Reporting: You get detailed success/failure lists (good for cleaning up dead tokens).
+ * 
+ * CONS:
+ * - Scalability bottleneck: Requires fetching thousands of DB documents first.
+ * - Slower execution time: Need to manually batch requests in chunks of 500.
+ */
+export async function broadcastNotificationToAll_OptionA(title: string, body: string) {
+  // Using the specific database instance from the config would require:
+  // const db = admin.firestore({ databaseId: "your-database-id" });
+  // But generally if using default, admin.firestore() is sufficient.
+  const db = admin.firestore();
+  const usersRef = db.collection('users');
+  const snapshot = await usersRef.where('fcmToken', '!=', null).get();
+
+  const tokens: string[] = [];
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    if (data.fcmToken) {
+      tokens.push(data.fcmToken);
+    }
+  });
+
+  if (tokens.length === 0) {
+    console.log("No FCM tokens found.");
+    return;
+  }
+
+  const payload = { notification: { title, body } };
+
+  // Firebase allows max 500 tokens per multicast
+  let successCount = 0;
+  for (let i = 0; i < tokens.length; i += 500) {
+    const batchTokens = tokens.slice(i, i + 500);
+    const response = await admin.messaging().sendEachForMulticast({
+      tokens: batchTokens,
+      ...payload
+    });
+    successCount += response.successCount;
+    // (Optional) Here you would also remove failed tokens using response.responses
+  }
+  
+  console.log(`Broadcast (Option A) sent: ${successCount} successful.`);
+}
+
+/**
+ * Option B: Subscribing device tokens to an 'all_users' topic 
+ * using `messaging().send({ topic: 'all_users' })`.
+ * 
+ * PROS:
+ * - Massive Scalability: O(1) backend cost. You send exactly 1 payload to Google.
+ * - Extremely fast server response.
+ * 
+ * CONS:
+ * - Requires clients to proactively subscribe to the topic via the SDK.
+ * - Granular tracking: Harder to know exactly which devices successfully received the message.
+ */
+export async function broadcastNotificationToAll_OptionB(title: string, body: string) {
+  const topic = 'all_users';
+  const payload = {
+    notification: { title, body },
+    topic: topic,
+  };
+
+  try {
+    const response = await admin.messaging().send(payload);
+    console.log(`Broadcast (Option B) sent to topic ${topic}:`, response);
+  } catch (error) {
+    console.error("Error broadcasting to topic:", error);
+  }
+}
+
+// Wrapper pointing to whichever implementation fits the current scale
+export async function broadcastNotificationToAll(title: string, body: string) {
+  // We default to Option A for direct token targeting since the frontend 
+  // currently saves the token to the users collection. If transitioning to Topics,
+  // we would use Option B and ensure the client SDK signs up using subscribeToTopic()
+  return broadcastNotificationToAll_OptionA(title, body);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { auth, logAnalyticsEvent } from "./lib/firebase";
+import { auth, logAnalyticsEvent, setupPushNotifications } from "./lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
@@ -38,6 +38,8 @@ export default function App() {
             displayName: u.displayName || "",
             photoURL: u.photoURL || ""
           }, { merge: true });
+          
+          setupPushNotifications(u.uid);
         } catch (err) {
           console.error("Failed to save user doc", err);
         }

@@ -1,11 +1,33 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDocFromServer, updateDoc } from 'firebase/firestore';
 import { getAnalytics, logEvent, isSupported } from 'firebase/analytics';
+import { getMessaging, getToken } from 'firebase/messaging';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+export const messaging = getMessaging(app);
+
+export async function setupPushNotifications(userId: string) {
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      const fcmToken = await getToken(messaging, { 
+        vapidKey: "BLNWc1w4srI6Wq5LTrPQyJG6ueN2zoj3fUIvyO0M3nevpDoT96CkiHkv96JzQzbTCMutEyjeuVA_fSf4Ae3EAo4"
+      });
+      if (fcmToken) {
+        await updateDoc(doc(db, "users", userId), {
+          fcmToken,
+          lastTokenUpdate: new Date().toISOString()
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Failed to setup push notifications", error);
+  }
+}
+
 export const db = initializeFirestore(
   app, 
   { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) },
