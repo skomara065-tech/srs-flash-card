@@ -58,6 +58,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
   
   const [saving, setSaving] = useState(false);
   const [pushing, setPushing] = useState<string | null>(null);
+  const [isPushing, setIsPushing] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [dryRun, setDryRun] = useState(false);
   const [showSuccessAnim, setShowSuccessAnim] = useState(false);
@@ -505,6 +506,33 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
     }
   };
 
+  const handlePushToAll = async () => {
+    try {
+      setIsPushing(true);
+      const response = await fetch('/api/broadcast', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: "Study Time!",
+          body: "Don't forget to review your flashcards today!"
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to broadcast");
+      }
+      showToast("Broadcast notification sent!", "success");
+    } catch (err: any) {
+      console.error(err);
+      showToast("Broadcast failed: " + err.message, "error");
+    } finally {
+      setIsPushing(false);
+    }
+  };
+
   const handleUpdateDeck = (deckId: string, updates: Partial<AdminDeck>) => {
     setAdminDecks(prev => prev.map(d => d.id === deckId ? { ...d, ...updates } : d));
     if (selectedDeck?.id === deckId) {
@@ -603,6 +631,24 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
               >
                 <Zap size={18} />
                 Publish All Decks & Folders
+              </button>
+
+              <button 
+                onClick={handlePushToAll}
+                disabled={isPushing}
+                className="bg-purple-600 text-white rounded-xl px-5 py-2 text-sm font-medium flex items-center gap-2 hover:bg-purple-700 transition-all active:scale-[0.98] shadow-sm tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPushing ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Broadcasting...
+                  </>
+                ) : (
+                  <>
+                    <Send size={18} />
+                    Broadcast Notification
+                  </>
+                )}
               </button>
 
               <button 

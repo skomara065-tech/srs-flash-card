@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+service-account.json -rI --exclude-dir=node_modules --exclude-dir=build --exclude-dir=dist --exclude-dir=coverage --exclude-dir=.DS_Store --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=build --exclude-dir=out --exclude-dir=dist --exclude-dir=.DS_Store
+serviceAccountKey.json
+.env.example

@@ -3,10 +3,19 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
+import fs from "fs";
 
-// Initialize Firebase Admin (Assumes ADC or GOOGLE_APPLICATION_CREDENTIALS)
+// 1. Read the service account key explicitly
+const serviceAccountPath = path.resolve('./serviceAccountKey.json');
+const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+
+// 2. Initialize Firebase Admin with explicit credentials
 if (!admin.apps.length) {
-  admin.initializeApp();
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    projectId: "gen-lang-client-0936895099" // Force the correct project
+  });
 }
 
 /**
@@ -22,10 +31,7 @@ if (!admin.apps.length) {
  * - Slower execution time: Need to manually batch requests in chunks of 500.
  */
 export async function broadcastNotificationToAll_OptionA(title: string, body: string) {
-  // Using the specific database instance from the config would require:
-  // const db = admin.firestore({ databaseId: "your-database-id" });
-  // But generally if using default, admin.firestore() is sufficient.
-  const db = admin.firestore();
+  const db = getFirestore("ai-studio-ddda2213-6a6e-4fbc-8b69-b044fc83e9ab");
   const usersRef = db.collection('users');
   const snapshot = await usersRef.where('fcmToken', '!=', null).get();
 
@@ -107,6 +113,21 @@ async function startServer() {
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  app.post("/api/broadcast", async (req, res) => {
+    try {
+      const { title, body } = req.body;
+      if (!title || !body) {
+        return res.status(400).json({ error: "Missing title or body" });
+      }
+      
+      await broadcastNotificationToAll(title, body);
+      res.json({ success: true, message: "Broadcast notifications sent." });
+    } catch (error: any) {
+      console.error("Error sending broadcast:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to send broadcast" });
+    }
   });
 
   // Vite middleware for development
