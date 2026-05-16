@@ -318,6 +318,11 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
           tags: deck.tags || [],
           parentId: parentId,
           folderId: folderId,
+          dueCounts: {
+            general: deckCards.length,
+            fast: deckCards.length,
+            medical: deckCards.length,
+          },
           updatedAt: serverTimestamp()
         }, { merge: true });
         
@@ -326,11 +331,28 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
 
         for (const card of deckCards) {
           const cardId = `admin_${deck.id}_${card.id}`;
+          const newCardProgress = {
+            nextReview: new Date(1000),
+            interval: 0,
+            easeFactor: 2.5,
+            repetitionCount: 0,
+            lastRating: 0,
+            status: 'learning',
+            learningStep: 0,
+            passCount: 0,
+            failCount: 0,
+          };
           batch.set(doc(db, `decks/${userDeckId}/cards`, cardId), {
-             deckId: userDeckId,
-             front: card.front,
-             back: card.back,
-             updatedAt: serverTimestamp()
+            deckId: userDeckId,
+            front: card.front,
+            back: card.back,
+            ...newCardProgress,
+            progress: {
+              general: newCardProgress,
+              fast: newCardProgress,
+              medical: newCardProgress,
+            },
+            updatedAt: serverTimestamp()
           }, { merge: true });
           
           opsCount++;
@@ -408,24 +430,29 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
           const userDeckId = `admin_${deck.id}_${uid}`;
           const parentId = deck.parentId ? `admin_${deck.parentId}_${uid}` : null;
           const folderId = deck.folderId ? `admin_${deck.folderId}_${uid}` : null;
+          const deckCards = deck.cards || [];
           
           batch.set(doc(db, "decks", userDeckId), {
             userId: uid,
             adminDeckId: deck.id,
             title: deck.title,
             description: deck.description || "",
-            cardCount: deck.cards?.length || 0,
+            cardCount: deckCards.length,
             srsMode: deck.srsMode || "general",
             tags: deck.tags || [],
             parentId: parentId,
             folderId: folderId,
+            dueCounts: {
+              general: deckCards.length,
+              fast: deckCards.length,
+              medical: deckCards.length,
+            },
             updatedAt: serverTimestamp()
           }, { merge: true });
           
           opsCount++;
           if (opsCount >= 400) await commitBatchAndReset();
 
-          const deckCards = deck.cards || [];
           // Instead of syncing cards incrementally, we just set them. (Assuming cards aren't massively updated).
           for (const card of deckCards) {
              const cardId = `admin_${deck.id}_${card.id}`;
@@ -433,10 +460,27 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
              // We only update the front and back. But if it's new, it creates it without progress.
              // We cannot easily do a conditional set without a read.
              // Given the Firestore batch limit and reads limit, we'll just update front and back.
+             const newCardProgress = {
+               nextReview: new Date(1000),
+               interval: 0,
+               easeFactor: 2.5,
+               repetitionCount: 0,
+               lastRating: 0,
+               status: 'learning',
+               learningStep: 0,
+               passCount: 0,
+               failCount: 0,
+             };
              batch.set(doc(db, `decks/${userDeckId}/cards`, cardId), {
                 deckId: userDeckId,
                 front: card.front,
                 back: card.back,
+                ...newCardProgress,
+                progress: {
+                  general: newCardProgress,
+                  fast: newCardProgress,
+                  medical: newCardProgress,
+                },
                 updatedAt: serverTimestamp()
              }, { merge: true });
              
