@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDocFromServer } from 'firebase/firestore';
 import { getAnalytics, logEvent, isSupported } from 'firebase/analytics';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -12,12 +12,18 @@ export const db = initializeFirestore(
   firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)' ? firebaseConfig.firestoreDatabaseId : undefined
 );
 
-let analytics: any = null;
+let analytics: ReturnType<typeof getAnalytics> | null = null;
 isSupported().then((supported) => {
   if (supported) {
-    analytics = getAnalytics(app);
+    try {
+      analytics = getAnalytics(app);
+    } catch (e) {
+      // Silently ignore analytics initialization failures (e.g. adblockers)
+    }
   }
-}).catch(console.error);
+}).catch(() => {
+  // Ignore
+});
 
 export { getAnalytics, logEvent };
 
@@ -35,8 +41,6 @@ export function logAnalyticsEvent(name: string, params?: Record<string, any>) {
 export const googleProvider = new GoogleAuthProvider();
 
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
-export const signInWithEmail = (email: string, pass: string) => signInWithEmailAndPassword(auth, email, pass);
-export const signUpWithEmail = (email: string, pass: string) => createUserWithEmailAndPassword(auth, email, pass);
 export const signOut = () => auth.signOut();
 
 // Connection test as per critical constraint

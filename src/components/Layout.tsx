@@ -1,8 +1,8 @@
 import * as React from "react";
 import { ReactNode, useState, useEffect } from "react";
-import { auth, signInWithGoogle, signOut, signInWithEmail, signUpWithEmail } from "../lib/firebase";
+import { auth, signInWithGoogle, signOut } from "../lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { LogOut, BookOpen, LayoutDashboard, Database, Loader2, Folder as FolderIcon, ChevronRight, ChevronDown, Layers, ShieldCheck, Mail, User as UserIcon } from "lucide-react";
+import { LogOut, BookOpen, LayoutDashboard, Loader2, Folder as FolderIcon, ChevronRight, ChevronDown, Layers, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Folder, Deck } from "../types";
 
@@ -24,67 +24,12 @@ interface LayoutProps {
 export function Layout({ children, user, loading, hideSidebar, folders = [], decks = [], onSelectDeck, viewFolderId, setViewFolderId, isAdmin, onAdminClick, currentView }: LayoutProps) {
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
 
-  const [authError, setAuthError] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [authMode, setAuthMode] = useState<"options" | "login" | "signup">("options");
-  const [isLoading, setIsLoading] = useState(false);
-
   const toggleFolder = (folderId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setExpandedFolders(prev => ({
       ...prev,
       [folderId]: !prev[folderId]
     }));
-  };
-
-  const handleGoogleSignIn = async () => {
-    setAuthError("");
-    try {
-      await signInWithGoogle();
-    } catch (err: any) {
-      if (err.code === 'auth/cancelled-popup-request' || err.code === 'auth/popup-closed-by-user') {
-        // User cancelled the login, ignore
-        return;
-      }
-      setAuthError(err.message || "Failed to sign in with Google.");
-    }
-  };
-
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      setAuthError("Email and password required");
-      return;
-    }
-    if (authMode === "signup" && password.length < 6) {
-      setAuthError("Password should be at least 6 characters");
-      return;
-    }
-    setIsLoading(true);
-    setAuthError("");
-    try {
-      if (authMode === "login") {
-        await signInWithEmail(email, password);
-      } else {
-        await signUpWithEmail(email, password);
-      }
-    } catch (err: any) {
-      if (err.code === 'auth/operation-not-allowed') {
-        setAuthError("Email/Password login is not enabled. Please enable it in Firebase Console > Authentication > Sign-in method.");
-      } else if (err.code === 'auth/weak-password') {
-        setAuthError("Password should be at least 6 characters.");
-      } else if (err.code === 'auth/email-already-in-use') {
-        setAuthError("An account already exists with this email.");
-      } else if (err.code === 'auth/invalid-credential') {
-        setAuthError("Invalid email or password.");
-      } else {
-        setAuthError(err.message || "Authentication failed");
-      }
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
   };
   
   if (loading) {
@@ -116,85 +61,18 @@ export function Layout({ children, user, loading, hideSidebar, folders = [], dec
             <p className="text-neutral-500 font-sans"> मास्टर your learning with AI-powered spaced repetition.</p>
           </div>
           
-          {authMode === "options" ? (
-            <div className="space-y-4">
-              {authError && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm text-center font-medium animate-in fade-in slide-in-from-top-2">{authError}</div>}
-              <button 
-                onClick={handleGoogleSignIn}
-                className="w-full bg-black text-white rounded-xl py-4 px-6 font-medium shadow-xl hover:bg-neutral-800 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-              >
-                <img src="https://www.google.com/favicon.ico" className="w-5 h-5 invert" alt="Google" />
-                Sign in with Google
-              </button>
-              <button 
-                onClick={() => setAuthMode('login')}
-                className="w-full bg-white text-black border border-neutral-200 rounded-xl py-4 px-6 font-medium shadow-sm hover:bg-neutral-50 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-              >
-                <Mail size={20} className="text-neutral-500" />
-                Sign in with Email
-              </button>
-              <button 
-                onClick={handleGoogleSignIn}
-                className="w-full bg-[#F5F5F5] text-neutral-700 border border-neutral-200 rounded-xl py-4 px-6 font-medium shadow-sm hover:bg-neutral-100 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-              >
-                <ShieldCheck size={20} className="text-neutral-500" />
-                Admin Login
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleEmailAuth} className="space-y-4 bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm text-left">
-              <h2 className="text-xl font-semibold mb-4 text-center">{authMode === 'login' ? 'Welcome Back' : 'Create Account'}</h2>
-              
-              {authError && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm text-center">{authError}</div>}
-              
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Email</label>
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-xl px-4 py-3 outline-none focus:border-black transition-all"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Password</label>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-xl px-4 py-3 outline-none focus:border-black transition-all"
-                  required
-                />
-              </div>
-
-              <button 
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-black text-white rounded-xl py-3 px-6 font-medium hover:bg-neutral-800 transition-all active:scale-[0.98] mt-2 flex justify-center items-center"
-              >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (authMode === 'login' ? 'Sign In' : 'Sign Up')}
-              </button>
-
-              <div className="flex flex-col gap-2 mt-4 text-center text-sm">
-                <button 
-                  type="button" 
-                  onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
-                  className="text-neutral-500 hover:text-black transition-colors"
-                >
-                  {authMode === 'login' ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => { setAuthMode('options'); setAuthError(""); setEmail(""); setPassword(""); }}
-                  className="text-neutral-400 hover:text-black transition-colors mt-2"
-                >
-                  ← Back to options
-                </button>
-              </div>
-            </form>
-          )}
+          <div className="space-y-3">
+            <button
+              onClick={signInWithGoogle}
+              className="w-full bg-black text-white rounded-xl py-4 px-6 font-medium shadow-xl hover:bg-neutral-800 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+            >
+              <img src="https://www.google.com/favicon.ico" className="w-5 h-5 invert" alt="Google" />
+              Sign in with Google
+            </button>
+            <p className="text-xs text-neutral-400 text-center">
+              Admins will see their dashboard automatically after signing in.
+            </p>
+          </div>
         </motion.div>
       </div>
     );
@@ -304,7 +182,7 @@ export function Layout({ children, user, loading, hideSidebar, folders = [], dec
               </button>
             )}
             <div className="flex items-center gap-3 p-3 mb-2">
-              <img src={user.photoURL || ""} className="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200" alt={user.displayName || "User"} />
+              <img src={user.photoURL || undefined} className="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200" alt={user.displayName || "User"} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{user.displayName}</p>
                 <p className="text-xs text-neutral-500 truncate">{user.email}</p>
